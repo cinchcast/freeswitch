@@ -1702,7 +1702,9 @@ static switch_status_t av_file_open(switch_file_handle_t *handle, const char *pa
 	char file[1024];
 	int disable_write_buffer = 0;
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
-
+	int fps;
+	int profile;
+	
 	switch_set_string(file, path);
 
 	if (handle->stream_name) {
