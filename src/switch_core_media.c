@@ -10976,6 +10976,20 @@ SWITCH_DECLARE(void) switch_core_media_gen_local_sdp(switch_core_session_t *sess
 					switch_core_media_set_smode(smh->session, SWITCH_MEDIA_TYPE_VIDEO, SWITCH_MEDIA_FLOW_SENDRECV, sdp_type);
 				}
 				
+				/* Add sendonly, recvonly video capabilities*/
+				if ((var_val = switch_channel_get_variable(session->channel, "origination_video_mode"))) {
+					if (!strcasecmp(sr, "sendonly")) {
+							switch_core_media_set_smode(smh->session, SWITCH_MEDIA_TYPE_VIDEO,
+														SWITCH_MEDIA_FLOW_SENDONLY, sdp_type);
+							v_engine->smode = SWITCH_MEDIA_FLOW_SENDONLY;
+					} else if (!strcasecmp(sr, "recvonly")) {
+						switch_core_media_set_smode(smh->session, SWITCH_MEDIA_TYPE_VIDEO, SWITCH_MEDIA_FLOW_RECVONLY,
+													sdp_type);
+						v_engine->smode = SWITCH_MEDIA_FLOW_RECVONLY;
+					}
+					switch_channel_set_variable(session->channel, "origination_video_mode", NULL);
+				}
+
 				switch_snprintf(buf + strlen(buf), SDPBUFLEN - strlen(buf), "\r\n");
 
 
