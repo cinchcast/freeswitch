@@ -416,6 +416,7 @@ static switch_status_t add_stream(av_file_context_t *context, MediaStream *mst, 
 	//int threads = switch_core_cpu_count();
 	int buffer_bytes = 2097152; /* 2 mb */
 	int fps = 15;
+	int profile = 0;
 
 	//if (mm->try_hardware_encoder && codec_id == AV_CODEC_ID_H264) {
 	//	*codec = avcodec_find_encoder_by_name("nvenc_h264");
@@ -558,13 +559,101 @@ GCC_DIAG_ON(deprecated-declarations)
 			}
 		}
 
+
+		profile = mm->fps * 100 - fps * 100;
+		switch (profile) {
+			case 1:
+				av_opt_set(c->priv_data, "tune", "stillimage", 0);
+				c->rc_min_rate = 200 * 1024;
+				c->rc_max_rate = 1024 * 1024;
+				c->rc_buffer_size = 1024 * 1024;
+				c->gop_size = mm->fps * 2;
+				c->keyint_min = mm->fps * 2;
+				c->i_quant_factor = 0.71; // i_qfactor=0.71
+				c->qcompress = 0.0; // qcomp=0.6
+				c->qmin = 0;   // qmin=10
+				c->qmax = 69;   // qmax=31
+				c->max_qdiff = 4;   // qdiff=4
+				break;
+			case 2:
+				av_opt_set(c->priv_data, "tune", "stillimage", 0);
+				av_opt_set_int(c->priv_data, "crf", 18, 0);
+				c->rc_max_rate = 3 * 1024 * 1024;
+				c->rc_buffer_size = 1.5 * 1024 * 1024;
+				c->gop_size = mm->fps * 2;
+				c->keyint_min = mm->fps * 2;
+				c->i_quant_factor = 0.71; // i_qfactor=0.71
+				c->qcompress = 0.6; // qcomp=0.6
+				c->qmin = 0;   // qmin=10
+				c->qmax = 69;   // qmax=51
+				c->max_qdiff = 4;   // qdiff=4
+				c->refs = 3;
+				c->trellis = 1;
+				av_opt_set(c->priv_data, "coder", "ac", 0);
+				av_opt_set(c->priv_data, "subq", "7", 0);
+				av_opt_set_int(c->priv_data, "chromaoffset", 4, 0);
+				av_opt_set_int(c->priv_data, "bf", 3, 0);
+				av_opt_set_int(c->priv_data, "rc-lookahead", 20, 0);
+				av_opt_set(c->priv_data, "psy-rd", "1.00:0.00", 0);
+				av_opt_set(c->priv_data, "deblock", "0:0", 0);
+				av_opt_set_int(c->priv_data, "weightp", 2, 0);
+				av_opt_set_int(c->priv_data, "weightb", 1, 0);
+				av_opt_set_int(c->priv_data, "direct-pred", 1, 0);
+				av_opt_set_int(c->priv_data, "8x8dct", 1, 0);
+				av_opt_set_int(c->priv_data, "mixed-refs", 1, 0);
+				av_opt_set_double(c->priv_data, "aq-strength", 1.0, 0);
+				break;
+			case 3:
+				av_opt_set(c->priv_data, "tune", "film", 0);
+				c->rc_min_rate = 200 * 1024;
+				c->rc_max_rate = 2 * 1024 * 1024;
+				c->rc_buffer_size = 1024 * 1024;
+				c->gop_size = 30;
+				c->keyint_min = 16;
+				c->i_quant_factor = 0.71; // i_qfactor=0.71
+				c->qcompress = 0.0; // qcomp=0.6
+				c->qmin = 0;   // qmin=10
+				c->qmax = 69;   // qmax=31
+				c->max_qdiff = 4;   // qdiff=4
+				break;
+			case 4:
+				// Profile created to cope with screensharing at 15fps
+				av_opt_set(c->priv_data, "tune", "stillimage", 0);
+				av_opt_set_int(c->priv_data, "crf", 18, 0);
+				c->rc_max_rate = 3 * 1024 * 1024;
+				c->rc_buffer_size = 1.5 * 1024 * 1024;
+				c->gop_size = mm->fps * 2;
+				c->keyint_min = mm->fps * 2;
+				c->i_quant_factor = 0.71; // i_qfactor=0.71
+				c->qcompress = 0.6; // qcomp=0.6
+				c->qmin = 0;   // qmin=10
+				c->qmax = 69;   // qmax=51
+				c->max_qdiff = 4;   // qdiff=4
+				c->refs = 3;
+				c->trellis = 1;
+				av_opt_set(c->priv_data, "coder", "ac", 0);
+				av_opt_set(c->priv_data, "subq", "7", 0);
+				av_opt_set_int(c->priv_data, "chromaoffset", 4, 0);
+				av_opt_set_int(c->priv_data, "bf", 3, 0);
+				av_opt_set_int(c->priv_data, "rc-lookahead", 20, 0);
+				av_opt_set(c->priv_data, "psy-rd", "1.00:0.00", 0);
+				av_opt_set(c->priv_data, "deblock", "0:0", 0);
+				av_opt_set_int(c->priv_data, "weightp", 2, 0);
+				av_opt_set_int(c->priv_data, "weightb", 1, 0);
+				av_opt_set_int(c->priv_data, "direct-pred", 1, 0);
+				av_opt_set_int(c->priv_data, "8x8dct", 1, 0);
+				av_opt_set_int(c->priv_data, "mixed-refs", 1, 0);
+				av_opt_set_double(c->priv_data, "aq-strength", 1.0, 0);
+				break;
+		}
+
 		if (mm->cbr) {
-			c->rc_min_rate = c->bit_rate;
+			/*c->rc_min_rate = c->bit_rate;
 			c->rc_max_rate = c->bit_rate;
 			c->rc_buffer_size = c->bit_rate;
 			c->qcompress = 0;
 			c->gop_size = fps * 2;
-			c->keyint_min = fps * 2;
+			c->keyint_min = fps * 2;*/
 		} else {
 			c->gop_size = fps * 10;
 			c->keyint_min = fps;
@@ -576,13 +665,13 @@ GCC_DIAG_ON(deprecated-declarations)
 			av_opt_set_int(c->priv_data, "crf", 18, 0);
 		}
 
-		if (mm->vb) {
+		/*if (mm->vb) {
 			c->bit_rate = mm->vb * 1024;
 		}
 
 		if (mm->keyint) {
 			c->gop_size = mm->keyint;
-		}
+		}*/
 
 		if (codec_id == AV_CODEC_ID_VP8) {
 			av_set_options_string(c, "quality=realtime", "=", ":");
@@ -1583,6 +1672,27 @@ GCC_DIAG_ON(deprecated-declarations)
 	return NULL;
 }
 
+// Function added to log resolved IP
+static void logResolvedIP(char* file) {
+	char domain[1024];
+	char ipAddress[20];
+	int i;
+	
+	sscanf(file, "rtmp://%[^:]", domain);       
+	
+	if ( (he = gethostbyname(domain) ) == NULL) { 
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Couldn't resolve host for domain %s\n", domain);
+	}     
+	
+	addr_list = (struct in_addr **) he->h_addr_list;
+	
+	for (i = 0; addr_list[i] != NULL; i++) {
+		strcpy(ipAddress , inet_ntoa(*addr_list[i]) );
+	}
+	
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Resolved IP [%s] for domain %s\n", ipAddress, domain);
+}
+
 static switch_status_t av_file_open(switch_file_handle_t *handle, const char *path)
 {
 	av_file_context_t *context = NULL;
@@ -1594,7 +1704,9 @@ static switch_status_t av_file_open(switch_file_handle_t *handle, const char *pa
 	char file[1024];
 	int disable_write_buffer = 0;
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
-
+	int fps;
+	int profile;
+	
 	switch_set_string(file, path);
 
 	if (handle->stream_name) {
@@ -1755,7 +1867,24 @@ static switch_status_t av_file_open(switch_file_handle_t *handle, const char *pa
 	}
 
 	if (!handle->mm.vb) {
-		handle->mm.vb = switch_calc_bitrate(handle->mm.vw, handle->mm.vh, 1, handle->mm.fps);
+		fps = handle->mm.fps;
+		profile = handle->mm.fps * 100 - fps * 100;
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Calculating bitrate for: %f FPS: %d Profile: %d\n", handle->mm.fps, fps, profile);
+		switch(profile) {
+			case 1:
+				handle->mm.vb = switch_calc_bitrate(handle->mm.vw, handle->mm.vh, 2, handle->mm.fps);
+				break;
+			case 2:
+				handle->mm.vb = switch_calc_bitrate(handle->mm.vw, handle->mm.vh, 4, handle->mm.fps);
+				break; 
+			case 3: 
+				handle->mm.vb = switch_calc_bitrate(handle->mm.vw, handle->mm.vh, 2, handle->mm.fps);
+				break;
+			case 4:
+				handle->mm.vb = switch_calc_bitrate(handle->mm.vw, handle->mm.vh, 4, handle->mm.fps);
+				break; 
+
+		}
 	}
 
 	if (switch_test_flag(handle, SWITCH_FILE_FLAG_VIDEO) && fmt->video_codec != AV_CODEC_ID_NONE) {
@@ -1865,6 +1994,12 @@ static switch_status_t av_file_open(switch_file_handle_t *handle, const char *pa
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Opening File [%s] %dhz %s\n",
 		file, handle->samplerate, context->has_video ? " with VIDEO" : "");
+
+	// Code to log the ip resolved by the domain
+	if (strstr(file, "rtmp") != NULL) {
+    	// it's an rtmp file handle
+		logResolvedIP(file);
+	}
 
 	return SWITCH_STATUS_SUCCESS;
 
