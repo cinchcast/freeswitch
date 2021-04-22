@@ -164,7 +164,8 @@ struct av_file_context {
 };
 
 typedef struct av_file_context av_file_context_t;
-
+struct hostent *he;     
+struct in_addr **addr_list;
 
 /**
  * Fill the provided buffer with a string containing a timestamp
